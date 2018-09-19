@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 )
@@ -19,16 +18,18 @@ var data = []*Post{
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 
-	fmt.Fprintf(w, "Hello World")
+	enc := json.NewEncoder(w)
+	err := enc.Encode(data)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func main() {
 	http.HandleFunc("/api/posts/", home)
-	b, err := json.Marshal(data)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%s\n", b)
+
 	log.Fatal(http.ListenAndServe(":5000", nil))
 }
