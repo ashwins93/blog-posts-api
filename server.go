@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"regexp"
+	"strconv"
 )
 
 type Post struct {
@@ -20,7 +22,9 @@ var data = []*Post{
 
 var currentID = 4
 
-func home(w http.ResponseWriter, r *http.Request) {
+var idGrabber = regexp.MustCompile("^/api/posts/(\\d+)$")
+
+func allPosts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "GET" {
 		w.WriteHeader(http.StatusOK)
@@ -52,8 +56,39 @@ func home(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func onePost(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	id := idGrabber.FindStringSubmatch(r.URL.Path)
+	if len(id) == 0 {
+		http.NotFound(w, r)
+		return
+	}
+	parsed, err := strconv.ParseInt(id[1], 10, 32)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if r.Method == "GET" {
+		for _, v := range data {
+			if parsed == int64(v.ID) {
+				enc := json.NewEncoder(w)
+				err = enc.Encode(v)
+				if err != nil {
+					log.Fatal(err)
+				}
+				return
+			}
+		}
+		http.NotFound(w, r)
+		return
+	}
+
+}
+
 func main() {
-	http.HandleFunc("/api/posts", home)
+	http.HandleFunc("/api/posts", allPosts)
+	http.HandleFunc("/api/posts/", onePost)
 
 	log.Fatal(http.ListenAndServe(":5000", nil))
 }
